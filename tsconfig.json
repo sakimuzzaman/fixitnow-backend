@@ -1,16 +1,48 @@
+// {
+//   "compilerOptions": {
+//     "target": "ES2022",
+//     "module": "NodeNext",
+//     "moduleResolution": "NodeNext",
+
+//     "rootDir": ".",
+//     "outDir": "./dist",
+
+//     "strict": true,
+//     "skipLibCheck": true,
+//     "resolveJsonModule": true,
+//     "esModuleInterop": true,
+
+//     "types": ["node"],
+//   },
+//   "include": [
+//     "src",
+//     "generated"
+//   ],
+//   "exclude": [
+//     "node_modules",
+//     "dist"
+//   ]
+// }
+
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "rootDir": "./",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "rootDir": ".",
     "outDir": "./dist",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
+
     "strict": true,
-    "skipLibCheck": true,
+    "esModuleInterop": true,
     "resolveJsonModule": true,
-    "baseUrl": "./src"
+    "skipLibCheck": true,
+
+    "types": ["node"]
   },
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src",
+    "prisma",
+    "generated"
+  ]
 }

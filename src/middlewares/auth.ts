@@ -1,10 +1,10 @@
 
 import jwt from "jsonwebtoken";
 import httpStatus from "http-status";
+import catchAsync from "../utils/catchAsync.js";
+import AppError from "../utils/AppError.js";
+import config from "../config/index.js";
 
-import config from "../config";
-import AppError from "../utils/AppError";
-import catchAsync from "../utils/catchAsync";
 
 const auth = (...roles: string[]) => {
   return catchAsync(async (req: any, res: any, next: any) => {

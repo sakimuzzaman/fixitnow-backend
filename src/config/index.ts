@@ -30,7 +30,7 @@ const config = {
 
   
 
-  AppUrl: getEnv("App_URL"),
+  AppUrl: getEnv("APP_URL"),
 };
 
 export default config;
