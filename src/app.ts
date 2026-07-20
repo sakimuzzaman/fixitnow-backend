@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import notFound from './middlewares/notFound.js';
 import { AuthRoutes } from './modules/auth/auth.route.js';
+
 import globalErrorHandler from './middlewares/globalErrorHandler.js';
 
 const app = express();
