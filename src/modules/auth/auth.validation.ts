@@ -10,8 +10,8 @@ const register = z.object({
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
       .regex(/[0-9]/, 'Password must contain at least one number'),
-      role: z.enum(['CUSTOMER', 'TECHNICIAN'], {
-        message: 'Role must be CUSTOMER or TECHNICIAN',
+      role: z.enum(['CUSTOMER', 'TECHNICIAN', 'ADMIN'], {
+        message: 'Role must be CUSTOMER, TECHNICIAN or ADMIN',
       }),
     phone: z.string().optional(),
     location: z.string().optional(),
