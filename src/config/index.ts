@@ -28,6 +28,10 @@ const config = {
     saltRounds: Number(getEnv("BCRYPT_SALT_ROUNDS")),
   },
 
+  stripe: {
+    secretKey: getEnv("STRIPE_SECRET_KEY"),
+    webhookSecret: getEnv("STRIPE_WEBHOOK_SECRET"),
+  },
   
 
   AppUrl: getEnv("APP_URL"),
