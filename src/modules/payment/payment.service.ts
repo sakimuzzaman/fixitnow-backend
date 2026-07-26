@@ -13,6 +13,89 @@ const stripe = new Stripe(config.stripe.secretKey, {
 // ============================
 // Create Payment Intent
 // ============================
+// const createPaymentIntent = async (userId: string, bookingId: string) => {
+//   // 1. Validate booking exists and belongs to user
+//   const booking = await prisma.booking.findUnique({
+//     where: { id: bookingId },
+//     include: {
+//       service: true,
+//       technicianProfile: true,
+//       customer: true,
+//       payment: true,
+//     },
+//   });
+
+//   if (!booking) {
+//     throw new AppError(httpStatus.NOT_FOUND, 'Booking not found');
+//   }
+
+//   if (booking.customerId !== userId) {
+//     throw new AppError(httpStatus.FORBIDDEN, 'You can only pay for your own bookings');
+//   }
+
+//   // 2. Check if booking is ACCEPTED (can only pay after technician accepts)
+//   if (booking.status !== 'ACCEPTED') {
+//     throw new AppError(
+//       httpStatus.BAD_REQUEST,
+//       `Cannot pay for booking. Status: ${booking.status}. Only ACCEPTED bookings can be paid.`
+//     );
+//   }
+
+//   // 3. Check if payment already exists
+//   if (booking.payment) {
+//     if (booking.payment.status === 'COMPLETED') {
+//       throw new AppError(httpStatus.BAD_REQUEST, 'Payment already completed');
+//     }
+//     if (booking.payment.transactionId) {
+//       // Return existing payment intent
+//       return {
+//         clientSecret: booking.payment.transactionId,
+//         paymentId: booking.payment.id,
+//         amount: booking.payment.amount,
+//       };
+//     }
+//   }
+
+//   // 4. Create Stripe Payment Intent
+//   const paymentIntent = await stripe.paymentIntents.create({
+//     amount: Math.round(booking.totalAmount * 100), // Stripe uses cents
+//     currency: 'usd',
+//     metadata: {
+//       bookingId: booking.id,
+//       userId: userId,
+//       technicianId: booking.technicianProfileId,
+//     },
+//     automatic_payment_methods: {
+//       enabled: true,
+//     },
+//   });
+
+//   // 5. Create or update payment record
+//   const payment = await prisma.payment.upsert({
+//     where: { bookingId: booking.id },
+//     create: {
+//       bookingId: booking.id,
+//       userId: userId,
+//       transactionId: paymentIntent.client_secret!,
+//       amount: booking.totalAmount,
+//       provider: 'STRIPE',
+//       status: 'PENDING',
+//     },
+//     update: {
+//       transactionId: paymentIntent.client_secret!,
+//       status: 'PENDING',
+//     },
+//   });
+
+//   return {
+//     clientSecret: paymentIntent.client_secret,
+//     paymentId: payment.id,
+//     amount: booking.totalAmount,
+//     currency: 'usd',
+//     bookingId: booking.id,
+//   };
+// };
+
 const createPaymentIntent = async (userId: string, bookingId: string) => {
   // 1. Validate booking exists and belongs to user
   const booking = await prisma.booking.findUnique({
@@ -30,10 +113,13 @@ const createPaymentIntent = async (userId: string, bookingId: string) => {
   }
 
   if (booking.customerId !== userId) {
-    throw new AppError(httpStatus.FORBIDDEN, 'You can only pay for your own bookings');
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      'You can only pay for your own bookings'
+    );
   }
 
-  // 2. Check if booking is ACCEPTED (can only pay after technician accepts)
+  // 2. Booking must be accepted
   if (booking.status !== 'ACCEPTED') {
     throw new AppError(
       httpStatus.BAD_REQUEST,
@@ -41,28 +127,21 @@ const createPaymentIntent = async (userId: string, bookingId: string) => {
     );
   }
 
-  // 3. Check if payment already exists
-  if (booking.payment) {
-    if (booking.payment.status === 'COMPLETED') {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Payment already completed');
-    }
-    if (booking.payment.transactionId) {
-      // Return existing payment intent
-      return {
-        clientSecret: booking.payment.transactionId,
-        paymentId: booking.payment.id,
-        amount: booking.payment.amount,
-      };
-    }
+  // 3. Already paid?
+  if (booking.payment?.status === 'COMPLETED') {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Payment already completed'
+    );
   }
 
   // 4. Create Stripe Payment Intent
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(booking.totalAmount * 100), // Stripe uses cents
+    amount: Math.round(booking.totalAmount * 100),
     currency: 'usd',
     metadata: {
       bookingId: booking.id,
-      userId: userId,
+      userId,
       technicianId: booking.technicianProfileId,
     },
     automatic_payment_methods: {
@@ -70,25 +149,29 @@ const createPaymentIntent = async (userId: string, bookingId: string) => {
     },
   });
 
-  // 5. Create or update payment record
+  // 5. Save the PAYMENT INTENT ID
+  // NOT the client_secret
   const payment = await prisma.payment.upsert({
-    where: { bookingId: booking.id },
+    where: {
+      bookingId: booking.id,
+    },
     create: {
       bookingId: booking.id,
-      userId: userId,
-      transactionId: paymentIntent.client_secret!,
+      userId,
+      transactionId: paymentIntent.id,
       amount: booking.totalAmount,
       provider: 'STRIPE',
       status: 'PENDING',
     },
     update: {
-      transactionId: paymentIntent.client_secret!,
+      transactionId: paymentIntent.id,
       status: 'PENDING',
     },
   });
 
   return {
     clientSecret: paymentIntent.client_secret,
+    paymentIntentId: paymentIntent.id,
     paymentId: payment.id,
     amount: booking.totalAmount,
     currency: 'usd',

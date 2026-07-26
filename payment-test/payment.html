@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stripe Payment Test</title>
+
+  <script src="https://js.stripe.com/v3/"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 15px;
+    }
+
+    #payment-element {
+      margin: 20px 0;
+    }
+
+    button {
+      padding: 12px 25px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #result {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Stripe Payment Test</h2>
+
+<label>Paste Client Secret</label>
+
+<input
+  id="clientSecret"
+  placeholder="Paste clientSecret here"
+/>
+
+<button id="load">
+  Load Payment Form
+</button>
+
+<hr>
+
+<form id="payment-form">
+
+  <div id="payment-element"></div>
+
+  <button id="submit">
+    Pay
+  </button>
+
+</form>
+
+<pre id="result"></pre>
+
+<script>
+
+const stripe = Stripe("pk_test_51Tu0VVLBDCPr2mCIVzF2sb8BpOP4UBqGgFRbWBM0pkxXozlvvx1tZWNHpUELGCr3Dm1TDY3aVaBfbus6knaDPdcE0078wLD7GL");
+
+let elements;
+
+document.getElementById("load").addEventListener("click", () => {
+
+    const clientSecret = document.getElementById("clientSecret").value.trim();
+
+    if (!clientSecret) {
+        alert("Please paste a Client Secret.");
+        return;
+    }
+
+    document.getElementById("payment-element").innerHTML = "";
+
+    elements = stripe.elements({
+        clientSecret
+    });
+
+    const paymentElement = elements.create("payment");
+
+    paymentElement.mount("#payment-element");
+
+});
+
+document.getElementById("payment-form").addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+
+        elements,
+
+        confirmParams: {
+            return_url: window.location.href
+        },
+
+        redirect: "if_required"
+
+    });
+
+    if (error) {
+
+        document.getElementById("result").innerHTML =
+`Payment Failed
+
+${error.message}`;
+
+        return;
+    }
+
+    document.getElementById("result").innerHTML =
+` Payment Successful
+
+Payment Intent ID:
+${paymentIntent.id}
+
+Status:
+${paymentIntent.status}
+
+Amount:
+${paymentIntent.amount / 100} ${paymentIntent.currency.toUpperCase()}
+
+
+
+${JSON.stringify(paymentIntent, null, 2)}`;
+
+    console.log("Payment Intent:", paymentIntent);
+
+});
+
+</script>
+
+</body>
+</html>
