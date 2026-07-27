@@ -12,7 +12,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 enum UserRole {
   CUSTOMER
   TECHNICIAN
@@ -59,7 +58,7 @@ model User {
   updatedAt DateTime   @updatedAt
 
   technicianProfile TechnicianProfile?
-  customerBookings  Booking[]         @relation("CustomerBookings")
+  customerBookings  Booking[]          @relation("CustomerBookings")
   reviews           Review[]
   payments          Payment[]
 
@@ -80,10 +79,10 @@ model TechnicianProfile {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  services     Service[]
-  bookings     Booking[]
+  services       Service[]
+  bookings       Booking[]
   availabilities TechnicianAvailability[]
-  reviews      Review[]
+  reviews        Review[]
 
   @@map("technician_profiles")
 }
@@ -92,9 +91,9 @@ model TechnicianAvailability {
   id                  String            @id @default(uuid())
   technicianProfileId String
   technicianProfile   TechnicianProfile @relation(fields: [technicianProfileId], references: [id], onDelete: Cascade)
-  dayOfWeek           String 
-  startTime           String 
-  endTime             String 
+  dayOfWeek           String
+  startTime           String
+  endTime             String
   isAvailable         Boolean           @default(true)
 
   @@map("technician_availabilities")
@@ -116,7 +115,7 @@ model Service {
   title               String
   description         String
   price               Float
-  duration            Int 
+  duration            Int
   location            String?
   isActive            Boolean           @default(true)
   technicianProfileId String
@@ -157,7 +156,7 @@ model Payment {
   booking       Booking         @relation(fields: [bookingId], references: [id])
   userId        String
   user          User            @relation(fields: [userId], references: [id])
-  transactionId String?         @unique 
+  transactionId String?         @unique
   amount        Float
   provider      PaymentProvider @default(STRIPE)
   status        PaymentStatus   @default(PENDING)
