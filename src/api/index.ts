@@ -7,6 +7,8 @@ import { BookingRoutes } from '../modules/booking/booking.route.js';
 import { PaymentRoutes } from '../modules/payment/payment.route.js';
 import { ReviewRoutes } from '../modules/review/review.route.js';
 import { AdminRoutes } from '../modules/admin/admin.route.js';
+import app from '../app.js';
+
 
 const router = express.Router();
 
@@ -48,4 +50,4 @@ const moduleRoutes = [
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
 
-export default router;
+export default app;
