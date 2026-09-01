@@ -113,69 +113,188 @@ const deleteService = async (userId: string, serviceId: string) => {
   return null;
 };
 
+// const getAllServices = async (filters: any) => {
+//   const { category, location, minPrice, maxPrice, rating, search, page = 1, limit = 10 } = filters;
+
+//   const where: Prisma.ServiceWhereInput = {
+//     isActive: true,
+//   };
+
+//   if (category) {
+//     where.category = { name: { equals: category, mode: 'insensitive' } };
+//   }
+
+//   if (location) {
+//     where.location = { contains: location, mode: 'insensitive' };
+//   }
+
+//   if (minPrice || maxPrice) {
+//     where.price = {};
+//     if (minPrice) where.price.gte = Number(minPrice);
+//     if (maxPrice) where.price.lte = Number(maxPrice);
+//   }
+
+//   if (rating) {
+//     where.technicianProfile = {
+//       ratingAvg: { gte: Number(rating) },
+//     };
+//   }
+
+//   if (search) {
+//     where.OR = [
+//       { title: { contains: search, mode: 'insensitive' } },
+//       { description: { contains: search, mode: 'insensitive' } },
+//     ];
+//   }
+
+//   const skip = (Number(page) - 1) * Number(limit);
+
+//   const [services, total] = await Promise.all([
+//     prisma.service.findMany({
+//       where,
+//       skip,
+//       take: Number(limit),
+//       include: {
+//         category: true,
+//         technicianProfile: {
+//           include: {
+//             user: {
+//               select: { name: true, email: true, avatar: true, location: true },
+//             },
+//           },
+//         },
+//       },
+//       orderBy: { createdAt: 'desc' },
+//     }),
+//     prisma.service.count({ where }),
+//   ]);
+
+//   return {
+//     data: services,
+//     meta: {
+//       total,
+//       page: Number(page),
+//       limit: Number(limit),
+//       totalPages: Math.ceil(total / Number(limit)),
+//     },
+//   };
+// };
+
+
 const getAllServices = async (filters: any) => {
-  const { category, location, minPrice, maxPrice, rating, search, page = 1, limit = 10 } = filters;
+  const {
+    category,
+    location,
+    minPrice,
+    maxPrice,
+    rating,
+    search,
+    page = 1,
+    limit = 10,
+  } = filters;
 
   const where: Prisma.ServiceWhereInput = {
     isActive: true,
   };
 
+  // Category
   if (category) {
-    where.category = { name: { equals: category, mode: 'insensitive' } };
+    where.categoryId = category;
   }
 
+  // Location
   if (location) {
-    where.location = { contains: location, mode: 'insensitive' };
-  }
-
-  if (minPrice || maxPrice) {
-    where.price = {};
-    if (minPrice) where.price.gte = Number(minPrice);
-    if (maxPrice) where.price.lte = Number(maxPrice);
-  }
-
-  if (rating) {
-    where.technicianProfile = {
-      ratingAvg: { gte: Number(rating) },
+    where.location = {
+      contains: location.trim(),
+      mode: "insensitive",
     };
   }
 
+  // Price
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {};
+
+    if (minPrice !== undefined) {
+      where.price.gte = Number(minPrice);
+    }
+
+    if (maxPrice !== undefined) {
+      where.price.lte = Number(maxPrice);
+    }
+  }
+
+  // Technician rating
+  if (rating !== undefined) {
+    where.technicianProfile = {
+      ratingAvg: {
+        gte: Number(rating),
+      },
+    };
+  }
+
+  // Search
   if (search) {
     where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
+      {
+        title: {
+          contains: search.trim(),
+          mode: "insensitive",
+        },
+      },
+      {
+        description: {
+          contains: search.trim(),
+          mode: "insensitive",
+        },
+      },
     ];
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  const currentPage = Math.max(Number(page), 1);
+  const currentLimit = Math.min(
+    Math.max(Number(limit), 1),
+    100
+  );
+
+  const skip = (currentPage - 1) * currentLimit;
 
   const [services, total] = await Promise.all([
     prisma.service.findMany({
       where,
       skip,
-      take: Number(limit),
+      take: currentLimit,
       include: {
         category: true,
         technicianProfile: {
           include: {
             user: {
-              select: { name: true, email: true, avatar: true, location: true },
+              select: {
+                name: true,
+                email: true,
+                avatar: true,
+                location: true,
+              },
             },
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: "desc",
+      },
     }),
-    prisma.service.count({ where }),
+
+    prisma.service.count({
+      where,
+    }),
   ]);
 
   return {
     data: services,
     meta: {
       total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / Number(limit)),
+      page: currentPage,
+      limit: currentLimit,
+      totalPages: Math.ceil(total / currentLimit),
     },
   };
 };

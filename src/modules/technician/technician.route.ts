@@ -9,12 +9,52 @@ const router = express.Router();
 
 
 
+// router.get('/', TechnicianController.getAllTechnicians);
+// router.get('/:id', TechnicianController.getTechnicianById);
+
+
+
+// router.get('/profile/me', auth('TECHNICIAN'), TechnicianController.getMyProfile);
+
+// router.put(
+//   '/profile',
+//   auth('TECHNICIAN'),
+//   validateRequest(TechnicianValidation.updateProfile),
+//   TechnicianController.updateProfile
+// );
+
+
+
 router.get('/', TechnicianController.getAllTechnicians);
-router.get('/:id', TechnicianController.getTechnicianById);
 
+router.get(
+  '/profile/me',
+  auth('TECHNICIAN'),
+  TechnicianController.getMyProfile
+);
 
+router.get(
+  "/availability",
+  auth("TECHNICIAN"),
+  TechnicianController.getMyAvailability
+);
 
-router.get('/profile/me', auth('TECHNICIAN'), TechnicianController.getMyProfile);
+router.put(
+  "/availability",
+  auth("TECHNICIAN"),
+  validateRequest(TechnicianValidation.updateAvailability),
+  TechnicianController.updateAvailability
+);
+
+router.get(
+  '/:id/availability',
+  TechnicianController.getTechnicianAvailability
+);
+
+router.get(
+  '/:id',
+  TechnicianController.getTechnicianById
+);
 
 router.put(
   '/profile',
@@ -23,11 +63,6 @@ router.put(
   TechnicianController.updateProfile
 );
 
-router.put(
-  '/availability',
-  auth('TECHNICIAN'),
-  validateRequest(TechnicianValidation.updateAvailability),
-  TechnicianController.updateAvailability
-);
+
 
 export const TechnicianRoutes = router;

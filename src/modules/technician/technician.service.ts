@@ -5,6 +5,7 @@ import prisma from '../../shared/prisma.js';
 
 
 
+
 const getAllTechnicians = async (filters: any) => {
   const {
     location,
@@ -241,7 +242,8 @@ const updateAvailability = async (userId: string, slots: any[]) => {
     const createdSlots = await tx.technicianAvailability.createMany({
       data: slots.map((slot) => ({
         technicianProfileId: profile.id,
-        dayOfWeek: slot.dayOfWeek,
+        // dayOfWeek: slot.dayOfWeek,
+        dayOfWeek: String(slot.dayOfWeek).trim().toUpperCase(),
         startTime: slot.startTime,
         endTime: slot.endTime,
         isAvailable: slot.isAvailable,
@@ -262,10 +264,242 @@ const updateAvailability = async (userId: string, slots: any[]) => {
   return result;
 };
 
+//newly added
+
+
+const getTechnicianAvailability = async (technicianId: string) => {
+
+  const technician = await prisma.technicianProfile.findUnique({
+    where: {
+      id: technicianId,
+    },
+    include: {
+      availabilities: true,
+    },
+  });
+
+  if (!technician) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Technician not found"
+    );
+  }
+
+  const availabilities = technician.availabilities.filter(
+    (slot) => slot.isAvailable
+  );
+  console.log("ACTIVE AVAILABILITIES:", availabilities);
+
+  const bookings = await prisma.booking.findMany({
+    where: {
+      technicianProfileId: technicianId,
+      status: {
+        in: [
+          "REQUESTED",
+          "ACCEPTED",
+          "PAID",
+          "IN_PROGRESS",
+        ],
+      },
+    },
+    include: {
+      service: {
+        select: {
+          duration: true,
+        },
+      },
+    },
+  });
+
+  const dayNames = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+  ];
+
+  const result: {
+    date: string;
+    slots: {
+      time: string;
+      isBooked: boolean;
+    }[];
+  }[] = [];
+
+  /*
+   * Get today's date in Bangladesh.
+   */
+  const today = new Date();
+
+  const todayFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const todayString = todayFormatter.format(today);
+
+  const [todayYear, todayMonth, todayDay] =
+    todayString.split("-").map(Number);
+
+  /*
+   * Create each calendar date in Bangladesh.
+   */
+  for (let i = 0; i < 14; i++) {
+    const calendarDate = new Date(
+      Date.UTC(
+        todayYear,
+        todayMonth - 1,
+        todayDay + i
+      )
+    );
+
+    const dateString = `${calendarDate.getUTCFullYear()}-${String(
+      calendarDate.getUTCMonth() + 1
+    ).padStart(2, "0")}-${String(
+      calendarDate.getUTCDate()
+    ).padStart(2, "0")}`;
+
+    const dateWithBdTimezone = new Date(
+      `${dateString}T12:00:00+06:00`
+    );
+
+    const weekdayFormatter = new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone: "Asia/Dhaka",
+        weekday: "long",
+      }
+    );
+
+    const dayOfWeek = weekdayFormatter
+      .format(dateWithBdTimezone)
+      .toUpperCase();
+
+    const dayAvailability = availabilities.find(
+      (slot) => slot.dayOfWeek === dayOfWeek
+    );
+
+    if (!dayAvailability) {
+      continue;
+    }
+
+    const [startHour, startMinute] =
+      dayAvailability.startTime
+        .split(":")
+        .map(Number);
+
+    const [endHour, endMinute] =
+      dayAvailability.endTime
+        .split(":")
+        .map(Number);
+
+    const startMinutes =
+      startHour * 60 + startMinute;
+
+    const endMinutes =
+      endHour * 60 + endMinute;
+
+    const slots: {
+      time: string;
+      isBooked: boolean;
+    }[] = [];
+
+    for (
+      let minutes = startMinutes;
+      minutes < endMinutes;
+      minutes += 60
+    ) {
+      const hour = Math.floor(minutes / 60);
+      const minute = minutes % 60;
+
+      const time = `${String(hour).padStart(
+        2,
+        "0"
+      )}:${String(minute).padStart(2, "0")}`;
+
+      /*
+       * This is the real timestamp for the booking.
+       *
+       * Example:
+       * 2026-08-21 + 10:00 Bangladesh
+       * becomes
+       * 2026-08-21T04:00:00.000Z
+       */
+      const slotDate = new Date(
+        `${dateString}T${time}:00+06:00`
+      );
+
+      const slotEnd = new Date(
+        slotDate.getTime() +
+          60 * 60 * 1000
+      );
+
+      const isBooked = bookings.some((booking) => {
+        const bookingStart = booking.scheduledAt;
+
+        const bookingEnd = new Date(
+          bookingStart.getTime() +
+            booking.service.duration * 60 * 1000
+        );
+
+        return (
+          slotDate < bookingEnd &&
+          slotEnd > bookingStart
+        );
+      });
+
+      slots.push({
+        time,
+        isBooked,
+      });
+    }
+
+    result.push({
+      date: dateString,
+      slots,
+    });
+  }
+
+  return result;
+};
+
+
+const getMyAvailability = async (userId: string) => {
+  const profile = await prisma.technicianProfile.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      availabilities: {
+        orderBy: {
+          dayOfWeek: "asc",
+        },
+      },
+    },
+  });
+
+  if (!profile) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Technician profile not found"
+    );
+  }
+
+  return profile.availabilities;
+};
+
+
 export const TechnicianService = {
   getAllTechnicians,
   getTechnicianById,
   getMyProfile,
   updateProfile,
   updateAvailability,
+  getTechnicianAvailability,
+  getMyAvailability
 };

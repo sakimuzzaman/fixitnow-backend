@@ -60,10 +60,44 @@ const updateAvailability = catchAsync(async (req : any, res : any) => {
   });
 });
 
+
+//newly added
+const getTechnicianAvailability = catchAsync(
+  async (req: any, res: any) => {
+    const result = await TechnicianService.getTechnicianAvailability(
+      req.params.id
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Technician availability fetched successfully",
+      data: result,
+    });
+  }
+);
+
+const getMyAvailability = catchAsync(
+  async (req: any, res: any) => {
+    const result = await TechnicianService.getMyAvailability(
+      req.user.id
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "My availability fetched successfully",
+      data: result,
+    });
+  }
+);
+
 export const TechnicianController = {
   getAllTechnicians,
   getTechnicianById,
   getMyProfile,
   updateProfile,
   updateAvailability,
+  getTechnicianAvailability,
+  getMyAvailability
 };

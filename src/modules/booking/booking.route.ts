@@ -3,6 +3,8 @@ import { BookingController } from './booking.controller.js';
 import { BookingValidation } from './booking.validation.js';
 import validateRequest from '../../middlewares/validateRequest.js';
 import auth from '../../middlewares/auth.js';
+import { ReviewValidation } from '../review/review.validation.js';
+import { ReviewController } from '../review/review.controller.js';
 
 
 const router = express.Router();
@@ -37,6 +39,13 @@ router.patch(
   '/:id/cancel',
   auth('CUSTOMER'),
   BookingController.cancelBooking
+);
+
+router.post(
+  "/:id/reviews",
+  auth("CUSTOMER"),
+  validateRequest(ReviewValidation.createReview),
+  ReviewController.createReview
 );
 
 export const BookingRoutes = router;

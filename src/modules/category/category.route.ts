@@ -2,7 +2,7 @@ import express from 'express';
 import auth from '../../middlewares/auth.js';
 import validateRequest from '../../middlewares/validateRequest.js';
 import { CategoryController } from './category.controller.js';
-import { CategoryValidation } from './category.valodation.js';
+import { CategoryValidation } from './category.validation.js';
 
 const router = express.Router();
 

@@ -4,105 +4,331 @@ import AppError from '../../utils/AppError.js';
 
 
 
+// const createBooking = async (userId: string, payload: any) => {
+
+//     // 1. Validate customer
+//     const customer = await prisma.user.findUnique({
+//       where: { id: userId },
+//     });
+  
+//     if (!customer || customer.role !== 'CUSTOMER') {
+//       throw new AppError(
+//         httpStatus.FORBIDDEN,
+//         'Only customers can book services'
+//       );
+//     }
+  
+//     // 2. Validate service
+//     const service = await prisma.service.findUnique({
+//       where: {
+//         id: payload.serviceId,
+//       },
+//       include: {
+//         technicianProfile: true,
+//       },
+//     });
+  
+//     if (!service) {
+//       throw new AppError(httpStatus.NOT_FOUND, 'Service not found');
+//     }
+  
+//     if (!service.isActive) {
+//       throw new AppError(
+//         httpStatus.BAD_REQUEST,
+//         'Service is no longer available'
+//       );
+//     }
+  
+//     // 3. Validate technician availability
+//     const scheduledDate = new Date(payload.scheduledAt);
+  
+//     const dayOfWeek = [
+//       'SUNDAY',
+//       'MONDAY',
+//       'TUESDAY',
+//       'WEDNESDAY',
+//       'THURSDAY',
+//       'FRIDAY',
+//       'SATURDAY',
+//     ][scheduledDate.getDay()];
+  
+//     const availability = await prisma.technicianAvailability.findFirst({
+//       where: {
+//         technicianProfileId: service.technicianProfileId,
+//         dayOfWeek,
+//         isAvailable: true,
+//       },
+//     });
+  
+//     if (!availability) {
+//       throw new AppError(
+//         httpStatus.BAD_REQUEST,
+//         `Technician is not available on ${dayOfWeek}`
+//       );
+//     }
+  
+//     const [startHour, startMinute] = availability.startTime
+//       .split(':')
+//       .map(Number);
+  
+//     const [endHour, endMinute] = availability.endTime
+//       .split(':')
+//       .map(Number);
+  
+//     const bookingMinutes =
+//       scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
+  
+//     const startMinutes = startHour * 60 + startMinute;
+//     const endMinutes = endHour * 60 + endMinute;
+  
+//     if (
+//       bookingMinutes < startMinutes ||
+//       bookingMinutes >= endMinutes
+//     ) {
+//       throw new AppError(
+//         httpStatus.BAD_REQUEST,
+//         `Technician is only available from ${availability.startTime} to ${availability.endTime} on ${dayOfWeek}`
+//       );
+//     }
+  
+//     // 4. Booking overlap check
+//     const bookingStart = scheduledDate;
+//     const bookingEnd = new Date(
+//       bookingStart.getTime() + service.duration * 60000
+//     );
+  
+//     const existingBookings = await prisma.booking.findMany({
+//       where: {
+//         technicianProfileId: service.technicianProfileId,
+//         status: {
+//           in: ['REQUESTED', 'ACCEPTED', 'PAID', 'IN_PROGRESS'],
+//         },
+//       },
+//       include: {
+//         service: {
+//           select: {
+//             duration: true,
+//           },
+//         },
+//       },
+//     });
+  
+//     const hasConflict = existingBookings.some((existing) => {
+//       const existingStart = existing.scheduledAt;
+  
+//       const existingEnd = new Date(
+//         existingStart.getTime() +
+//           existing.service.duration * 60000
+//       );
+  
+//       return (
+//         bookingStart < existingEnd &&
+//         bookingEnd > existingStart
+//       );
+//     });
+  
+//     if (hasConflict) {
+//       throw new AppError(
+//         httpStatus.CONFLICT,
+//         'Technician already has a booking during this time.'
+//       );
+//     }
+  
+//     // 5. Create booking
+//     const booking = await prisma.$transaction(async (tx) => {
+//       return await tx.booking.create({
+//         data: {
+//           customerId: userId,
+//           technicianProfileId: service.technicianProfileId,
+//           serviceId: service.id,
+//           scheduledAt: bookingStart,
+//           address: payload.address,
+//           notes: payload.notes,
+//           totalAmount: service.price,
+//           status: 'REQUESTED',
+//         },
+//         include: {
+//           service: {
+//             include: {
+//               category: true,
+//             },
+//           },
+//           technicianProfile: {
+//             include: {
+//               user: {
+//                 select: {
+//                   name: true,
+//                   email: true,
+//                   location: true,
+//                 },
+//               },
+//             },
+//           },
+//           customer: {
+//             select: {
+//               name: true,
+//               phone: true,
+//               email: true,
+//             },
+//           },
+//         },
+//       });
+//     });
+  
+//     return booking;
+//   };
+
 const createBooking = async (userId: string, payload: any) => {
-    // 1. Validate customer
-    const customer = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+  // 1. Validate customer
+  const customer = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!customer || customer.role !== 'CUSTOMER') {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      'Only customers can book services'
+    );
+  }
+
+  // 2. Validate service
+  const service = await prisma.service.findUnique({
+    where: {
+      id: payload.serviceId,
+    },
+    include: {
+      technicianProfile: true,
+    },
+  });
+
+  if (!service) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      'Service not found'
+    );
+  }
+
+  if (!service.isActive) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Service is no longer available'
+    );
+  }
+
+  // 3. Validate technician availability
+  const scheduledDate = new Date(payload.scheduledAt);
+
+ 
+
+  if (isNaN(scheduledDate.getTime())) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Invalid scheduled date and time'
+    );
+  }
+
+  /*
+   * IMPORTANT:
+   * Always calculate the booking day/time in Bangladesh timezone.
+   * Database Date objects are stored as UTC, but the technician's
+   * availability is based on Bangladesh local time.
+   */
+
+  const bdDateFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Dhaka',
+    weekday: 'long',
+  });
+
+  const dayOfWeek = bdDateFormatter
+    .format(scheduledDate)
+    .toUpperCase();
+
+  const bdTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Dhaka',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const bdTime = bdTimeFormatter.format(scheduledDate);
+
   
-    if (!customer || customer.role !== 'CUSTOMER') {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        'Only customers can book services'
-      );
-    }
-  
-    // 2. Validate service
-    const service = await prisma.service.findUnique({
-      where: {
-        id: payload.serviceId,
-      },
-      include: {
-        technicianProfile: true,
-      },
-    });
-  
-    if (!service) {
-      throw new AppError(httpStatus.NOT_FOUND, 'Service not found');
-    }
-  
-    if (!service.isActive) {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        'Service is no longer available'
-      );
-    }
-  
-    // 3. Validate technician availability
-    const scheduledDate = new Date(payload.scheduledAt);
-  
-    const dayOfWeek = [
-      'SUNDAY',
-      'MONDAY',
-      'TUESDAY',
-      'WEDNESDAY',
-      'THURSDAY',
-      'FRIDAY',
-      'SATURDAY',
-    ][scheduledDate.getDay()];
-  
-    const availability = await prisma.technicianAvailability.findFirst({
+
+  const [bookingHour, bookingMinute] = bdTime
+    .split(':')
+    .map(Number);
+
+  const bookingMinutes =
+    bookingHour * 60 + bookingMinute;
+
+  // Find technician availability for this day
+  const availability =
+    await prisma.technicianAvailability.findFirst({
       where: {
         technicianProfileId: service.technicianProfileId,
         dayOfWeek,
         isAvailable: true,
       },
     });
-  
-    if (!availability) {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        `Technician is not available on ${dayOfWeek}`
-      );
-    }
-  
-    const [startHour, startMinute] = availability.startTime
-      .split(':')
-      .map(Number);
-  
-    const [endHour, endMinute] = availability.endTime
-      .split(':')
-      .map(Number);
-  
-    const bookingMinutes =
-      scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
-  
-    const startMinutes = startHour * 60 + startMinute;
-    const endMinutes = endHour * 60 + endMinute;
-  
-    if (
-      bookingMinutes < startMinutes ||
-      bookingMinutes >= endMinutes
-    ) {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        `Technician is only available from ${availability.startTime} to ${availability.endTime} on ${dayOfWeek}`
-      );
-    }
-  
-    // 4. Booking overlap check
-    const bookingStart = scheduledDate;
-    const bookingEnd = new Date(
-      bookingStart.getTime() + service.duration * 60000
+
+  if (!availability) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Technician is not available on ${dayOfWeek}`
     );
-  
-    const existingBookings = await prisma.booking.findMany({
+  }
+
+  // Convert technician availability to minutes
+  const [startHour, startMinute] = availability.startTime
+    .split(':')
+    .map(Number);
+
+  const [endHour, endMinute] = availability.endTime
+    .split(':')
+    .map(Number);
+
+  const startMinutes =
+    startHour * 60 + startMinute;
+
+  const endMinutes =
+    endHour * 60 + endMinute;
+
+  // Check whether booking time is inside availability
+  if (
+    bookingMinutes < startMinutes ||
+    bookingMinutes >= endMinutes
+  ) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Technician is only available from ${availability.startTime} to ${availability.endTime} on ${dayOfWeek}`
+    );
+  }
+
+  // 4. Booking overlap check
+
+  const bookingStart = scheduledDate;
+
+  const bookingEnd = new Date(
+    bookingStart.getTime() +
+      service.duration * 60 * 1000
+  );
+
+  const existingBookings =
+    await prisma.booking.findMany({
       where: {
-        technicianProfileId: service.technicianProfileId,
+        technicianProfileId:
+          service.technicianProfileId,
+
         status: {
-          in: ['REQUESTED', 'ACCEPTED', 'PAID', 'IN_PROGRESS'],
+          in: [
+            'REQUESTED',
+            'ACCEPTED',
+            'PAID',
+            'IN_PROGRESS',
+          ],
         },
       },
+
       include: {
         service: {
           select: {
@@ -111,34 +337,38 @@ const createBooking = async (userId: string, payload: any) => {
         },
       },
     });
-  
-    const hasConflict = existingBookings.some((existing) => {
+
+  const hasConflict = existingBookings.some(
+    (existing) => {
       const existingStart = existing.scheduledAt;
-  
+
       const existingEnd = new Date(
         existingStart.getTime() +
-          existing.service.duration * 60000
+          existing.service.duration * 60 * 1000
       );
-  
+
       return (
         bookingStart < existingEnd &&
         bookingEnd > existingStart
       );
-    });
-  
-    if (hasConflict) {
-      throw new AppError(
-        httpStatus.CONFLICT,
-        'Technician already has a booking during this time.'
-      );
     }
-  
-    // 5. Create booking
-    const booking = await prisma.$transaction(async (tx) => {
+  );
+
+  if (hasConflict) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      'Technician already has a booking during this time.'
+    );
+  }
+
+  // 5. Create booking
+  const booking = await prisma.$transaction(
+    async (tx) => {
       return await tx.booking.create({
         data: {
           customerId: userId,
-          technicianProfileId: service.technicianProfileId,
+          technicianProfileId:
+            service.technicianProfileId,
           serviceId: service.id,
           scheduledAt: bookingStart,
           address: payload.address,
@@ -146,12 +376,14 @@ const createBooking = async (userId: string, payload: any) => {
           totalAmount: service.price,
           status: 'REQUESTED',
         },
+
         include: {
           service: {
             include: {
               category: true,
             },
           },
+
           technicianProfile: {
             include: {
               user: {
@@ -163,6 +395,7 @@ const createBooking = async (userId: string, payload: any) => {
               },
             },
           },
+
           customer: {
             select: {
               name: true,
@@ -172,10 +405,15 @@ const createBooking = async (userId: string, payload: any) => {
           },
         },
       });
-    });
-  
-    return booking;
-  };
+    }
+  );
+
+  return booking;
+
+};
+
+
+
 
 // createdAt : 
 const getMyBookings = async (userId: string) => {
@@ -255,13 +493,63 @@ const technicianProfile = await prisma.technicianProfile.findUnique({
 
 
 const getTechnicianBookings = async (userId: string) => {
+  console.log("========== TECHNICIAN BOOKINGS DEBUG ==========");
+  console.log("Logged-in userId:", userId);
+
   const technicianProfile = await prisma.technicianProfile.findUnique({
     where: { userId },
   });
+  console.log(
+    "========== CHECK BOOKING OWNER =========="
+  );
+
+  const profile = await prisma.technicianProfile.findUnique({
+    where: {
+      id: "36f6f0f3-22aa-43cd-addd-58194981dd81",
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  console.log(profile);
+
+  console.log(
+    "========================================"
+  );
+
+  console.log("Technician profile:", technicianProfile);
 
   if (!technicianProfile) {
     throw new AppError(httpStatus.NOT_FOUND, 'Technician profile not found');
   }
+
+  console.log(
+    "Technician profile ID:",
+    technicianProfile.id
+  );
+
+  const allBookings = await prisma.booking.findMany({
+    select: {
+      id: true,
+      technicianProfileId: true,
+      customerId: true,
+      serviceId: true,
+      status: true,
+      scheduledAt: true,
+    },
+  });
+
+  console.log("========== ALL BOOKINGS ==========");
+  console.log(allBookings);
+  console.log("==================================");
 
   const bookings = await prisma.booking.findMany({
     where: {
@@ -281,6 +569,11 @@ const getTechnicianBookings = async (userId: string) => {
     },
     orderBy: { createdAt: 'desc' },
   });
+
+   console.log("Bookings found:", bookings.length);
+  console.log("Bookings:", bookings);
+
+  console.log("==============================================");
 
   return bookings;
 };

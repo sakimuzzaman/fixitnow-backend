@@ -1,0 +1,242 @@
+{
+  "info": {
+    "_postman_id": "bf31fe72-51d1-4f2b-8c06-cb9dd678a501",
+    "name": "FixItNow API",
+    "description": "Collection generated from the current Express routes, Zod validations, Prisma schema, and controller response contracts. Run the requests roughly in folder order. Requests that need created records use collection variables populated by tests. Stripe confirmation requires a real Stripe test payment intent that has succeeded; webhook delivery should be sent by Stripe/Stripe CLI.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "customerEmail", "value": "customer@example.com" },
+    { "key": "customerPassword", "value": "Customer123" },
+    { "key": "technicianEmail", "value": "technician@example.com" },
+    { "key": "technicianPassword", "value": "Technician123" },
+    { "key": "adminEmail", "value": "admin@fixitnow.com" },
+    { "key": "adminPassword", "value": "Admin12345" },
+    { "key": "customerToken", "value": "" },
+    { "key": "technicianToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "categoryId", "value": "REPLACE_WITH_CATEGORY_UUID" },
+    { "key": "serviceId", "value": "REPLACE_WITH_SERVICE_UUID" },
+    { "key": "technicianProfileId", "value": "REPLACE_WITH_TECHNICIAN_PROFILE_UUID" },
+    { "key": "bookingId", "value": "REPLACE_WITH_BOOKING_UUID" },
+    { "key": "paymentId", "value": "REPLACE_WITH_PAYMENT_UUID" },
+    { "key": "paymentIntentId", "value": "REPLACE_WITH_STRIPE_PAYMENT_INTENT_ID" },
+    { "key": "userId", "value": "REPLACE_WITH_USER_UUID" }
+  ],
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Health check",
+          "request": { "method": "GET", "url": "{{baseUrl}}/", "description": "No authentication required." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "FixItNow API is running..." }]
+        },
+        {
+          "name": "List categories",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/categories" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"message\": \"Categories fetched successfully\",\n  \"data\": [{ \"id\": \"category-uuid\", \"name\": \"Plumbing\", \"description\": \"Pipe and drain repairs\", \"icon\": \"https://example.com/plumbing.png\", \"createdAt\": \"2026-08-19T10:00:00.000Z\" }]\n}" }]
+        },
+        {
+          "name": "List services (with filters)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/services?category=Plumbing&location=Dhaka&minPrice=500&maxPrice=3000&rating=4&search=leak&page=1&limit=10", "description": "All query parameters are optional: category, location, minPrice, maxPrice, rating, search, page, limit." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"message\": \"Services fetched successfully\",\n  \"data\": [{ \"id\": \"service-uuid\", \"title\": \"Kitchen leak repair\", \"price\": 1200, \"duration\": 60, \"isActive\": true, \"category\": { \"id\": \"category-uuid\", \"name\": \"Plumbing\" } }],\n  \"meta\": { \"total\": 1, \"page\": 1, \"limit\": 10, \"totalPages\": 1 }\n}" }]
+        },
+        {
+          "name": "List technicians (with filters)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/technicians?location=Dhaka&minRating=4&maxPrice=1000&skill=Plumbing&category=Plumbing&search=repair&page=1&limit=10", "description": "All query parameters are optional: location, minRating, maxPrice, skill, category, search, page, limit." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"message\": \"Technicians fetched successfully\",\n  \"data\": [{ \"id\": \"technician-profile-uuid\", \"bio\": \"Experienced home-service technician\", \"skills\": [\"Plumbing\"], \"ratingAvg\": 4.5, \"user\": { \"id\": \"user-uuid\", \"name\": \"Alex Technician\", \"location\": \"Dhaka\" } }],\n  \"meta\": { \"total\": 1, \"page\": 1, \"limit\": 10, \"totalPages\": 1 }\n}" }]
+        },
+        {
+          "name": "Get technician by profile ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/technicians/{{technicianProfileId}}" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"message\": \"Technician profile fetched successfully\",\n  \"data\": { \"id\": \"technician-profile-uuid\", \"ratingAvg\": 4.5, \"user\": { \"name\": \"Alex Technician\" }, \"services\": [], \"availabilities\": [], \"reviews\": [] }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sam Customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"phone\": \"01700000001\",\n  \"location\": \"Dhaka\"\n}" }, "url": "{{baseUrl}}/api/auth/register" },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully\",\n  \"data\": { \"id\": \"customer-user-uuid\", \"name\": \"Sam Customer\", \"email\": \"customer@example.com\", \"role\": \"CUSTOMER\", \"status\": \"ACTIVE\", \"phone\": \"01700000001\", \"location\": \"Dhaka\", \"createdAt\": \"2026-08-19T10:00:00.000Z\", \"updatedAt\": \"2026-08-19T10:00:00.000Z\" }\n}" }]
+        },
+        {
+          "name": "Register technician",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Alex Technician\",\n  \"email\": \"{{technicianEmail}}\",\n  \"password\": \"{{technicianPassword}}\",\n  \"role\": \"TECHNICIAN\",\n  \"phone\": \"01700000002\",\n  \"location\": \"Dhaka\"\n}" }, "url": "{{baseUrl}}/api/auth/register" },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully\",\n  \"data\": { \"id\": \"technician-user-uuid\", \"name\": \"Alex Technician\", \"email\": \"technician@example.com\", \"role\": \"TECHNICIAN\", \"status\": \"ACTIVE\" }\n}" }]
+        },
+        {
+          "name": "Login customer",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('customerToken', body.data.token);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}" }, "url": "{{baseUrl}}/api/auth/login" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": { \"token\": \"eyJ...\", \"user\": { \"id\": \"customer-user-uuid\", \"role\": \"CUSTOMER\" } }\n}" }]
+        },
+        {
+          "name": "Login technician",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('technicianToken', body.data.token);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{technicianEmail}}\",\n  \"password\": \"{{technicianPassword}}\"\n}" }, "url": "{{baseUrl}}/api/auth/login" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Login successful\", \"data\": { \"token\": \"eyJ...\", \"user\": { \"role\": \"TECHNICIAN\" } } }" }]
+        },
+        {
+          "name": "Login seeded admin",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('adminToken', body.data.token);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" }, "url": "{{baseUrl}}/api/auth/login", "description": "Run `npm run seed:admin` before this request." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Login successful\", \"data\": { \"token\": \"eyJ...\", \"user\": { \"role\": \"ADMIN\" } } }" }]
+        },
+        {
+          "name": "Get my account",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{baseUrl}}/api/auth/me" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"User profile fetched successfully\", \"data\": { \"id\": \"customer-user-uuid\", \"email\": \"customer@example.com\", \"role\": \"CUSTOMER\" } }" }]
+        }
+      ]
+    },
+    {
+      "name": "Admin and category",
+      "item": [
+        {
+          "name": "Create category",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('categoryId', body.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Plumbing\",\n  \"description\": \"Pipe, drain, and leak repair\",\n  \"icon\": \"https://example.com/icons/plumbing.png\"\n}" }, "url": "{{baseUrl}}/api/categories" },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{ \"success\": true, \"message\": \"Category created successfully\", \"data\": { \"id\": \"category-uuid\", \"name\": \"Plumbing\", \"description\": \"Pipe, drain, and leak repair\", \"icon\": \"https://example.com/icons/plumbing.png\", \"createdAt\": \"2026-08-19T10:00:00.000Z\" } }" }]
+        },
+        {
+          "name": "List users",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/admin/users" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Users fetched\", \"data\": [{ \"id\": \"user-uuid\", \"name\": \"Sam Customer\", \"email\": \"customer@example.com\", \"role\": \"CUSTOMER\", \"status\": \"ACTIVE\", \"technicianProfile\": null }] }" }]
+        },
+        {
+          "name": "Update user status",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"BANNED\" }" }, "url": "{{baseUrl}}/api/admin/users/{{userId}}", "description": "The current implementation accepts status from the body but does not apply Zod validation. Use ACTIVE or BANNED." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"User status updated\", \"data\": { \"id\": \"user-uuid\", \"status\": \"BANNED\" } }" }]
+        },
+        {
+          "name": "List all bookings",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/admin/bookings" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Bookings fetched\", \"data\": [{ \"id\": \"booking-uuid\", \"status\": \"REQUESTED\", \"customer\": {}, \"technicianProfile\": {} }] }" }]
+        }
+      ]
+    },
+    {
+      "name": "Technician",
+      "item": [
+        {
+          "name": "Update technician profile",
+          "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"bio\": \"Licensed technician with years of residential repair experience.\",\n  \"experienceYears\": 5,\n  \"skills\": [\"Plumbing\", \"Leak repair\"],\n  \"hourlyRate\": 800\n}" }, "url": "{{baseUrl}}/api/technician/profile" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Profile updated successfully\", \"data\": { \"id\": \"technician-profile-uuid\", \"bio\": \"Licensed technician with years of residential repair experience.\", \"experienceYears\": 5, \"skills\": [\"Plumbing\", \"Leak repair\"], \"hourlyRate\": 800 } }" }]
+        },
+        {
+          "name": "Set availability",
+          "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"slots\": [\n    { \"dayOfWeek\": \"MONDAY\", \"startTime\": \"09:00\", \"endTime\": \"17:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": \"TUESDAY\", \"startTime\": \"09:00\", \"endTime\": \"17:00\", \"isAvailable\": true }\n  ]\n}" }, "url": "{{baseUrl}}/api/technician/availability" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Availability updated successfully\", \"data\": [{ \"id\": \"availability-uuid\", \"dayOfWeek\": \"MONDAY\", \"startTime\": \"09:00\", \"endTime\": \"17:00\", \"isAvailable\": true }] }" }]
+        },
+        {
+          "name": "Get my technician profile",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('technicianProfileId', body.data.id);"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }], "url": "{{baseUrl}}/api/technician/profile/me" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Profile fetched successfully\", \"data\": { \"id\": \"technician-profile-uuid\", \"user\": { \"name\": \"Alex Technician\" }, \"services\": [], \"availabilities\": [], \"_count\": { \"bookings\": 0, \"reviews\": 0, \"services\": 0 } } }" }]
+        },
+        {
+          "name": "Create service",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('serviceId', body.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Kitchen leak repair\",\n  \"description\": \"Repair leaking pipes, taps, and kitchen drain connections.\",\n  \"price\": 1200,\n  \"duration\": 60,\n  \"location\": \"Dhaka\",\n  \"categoryId\": \"{{categoryId}}\"\n}" }, "url": "{{baseUrl}}/api/services" },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{ \"success\": true, \"message\": \"Service created successfully\", \"data\": { \"id\": \"service-uuid\", \"title\": \"Kitchen leak repair\", \"price\": 1200, \"duration\": 60, \"category\": { \"id\": \"category-uuid\", \"name\": \"Plumbing\" }, \"technicianProfile\": { \"user\": { \"name\": \"Alex Technician\" } } } }" }]
+        },
+        {
+          "name": "Get my services",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }], "url": "{{baseUrl}}/api/services/my-services" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Technician services fetched successfully\", \"data\": [{ \"id\": \"service-uuid\", \"title\": \"Kitchen leak repair\", \"category\": { \"name\": \"Plumbing\" } }] }" }]
+        },
+        {
+          "name": "Update my service",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"price\": 1300, \"isActive\": true }" }, "url": "{{baseUrl}}/api/services/{{serviceId}}" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Service updated successfully\", \"data\": { \"id\": \"service-uuid\", \"price\": 1300, \"isActive\": true } }" }]
+        },
+        {
+          "name": "Get technician bookings",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }], "url": "{{baseUrl}}/api/bookings/technician/bookings" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Bookings fetched successfully\", \"data\": [{ \"id\": \"booking-uuid\", \"status\": \"REQUESTED\", \"service\": {}, \"customer\": {}, \"payment\": null, \"review\": null }] }" }]
+        },
+        {
+          "name": "Accept booking",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"ACCEPTED\", \"note\": \"I can attend at the scheduled time.\" }" }, "url": "{{baseUrl}}/api/bookings/{{bookingId}}/status", "description": "Valid status flow: REQUESTED→ACCEPTED/DECLINED; ACCEPTED→PAID (normally updated by payment); PAID→IN_PROGRESS; IN_PROGRESS→COMPLETED. The optional note is validated but not saved by the implementation." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Booking status updated successfully\", \"data\": { \"id\": \"booking-uuid\", \"status\": \"ACCEPTED\", \"service\": {}, \"customer\": {}, \"payment\": null } }" }]
+        },
+        {
+          "name": "Start paid booking",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"IN_PROGRESS\" }" }, "url": "{{baseUrl}}/api/bookings/{{bookingId}}/status" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Booking status updated successfully\", \"data\": { \"id\": \"booking-uuid\", \"status\": \"IN_PROGRESS\" } }" }]
+        },
+        {
+          "name": "Complete booking",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{technicianToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"status\": \"COMPLETED\" }" }, "url": "{{baseUrl}}/api/bookings/{{bookingId}}/status" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Booking status updated successfully\", \"data\": { \"id\": \"booking-uuid\", \"status\": \"COMPLETED\" } }" }]
+        }
+      ]
+    },
+    {
+      "name": "Customer: bookings, payments, reviews",
+      "item": [
+        {
+          "name": "Create booking",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) pm.collectionVariables.set('bookingId', body.data.id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"serviceId\": \"{{serviceId}}\",\n  \"scheduledAt\": \"2026-08-24T10:00:00.000Z\",\n  \"address\": \"House 10, Road 5, Dhanmondi, Dhaka\",\n  \"notes\": \"Please call on arrival.\"\n}" }, "url": "{{baseUrl}}/api/bookings", "description": "The date must match an available technician slot and cannot overlap an active booking. Adjust scheduledAt to a future time/day configured in Set availability." },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{ \"success\": true, \"message\": \"Booking created successfully\", \"data\": { \"id\": \"booking-uuid\", \"status\": \"REQUESTED\", \"scheduledAt\": \"2026-08-24T10:00:00.000Z\", \"address\": \"House 10, Road 5, Dhanmondi, Dhaka\", \"totalAmount\": 1300, \"service\": {}, \"technicianProfile\": {}, \"customer\": {} } }" }]
+        },
+        {
+          "name": "Get my bookings",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{baseUrl}}/api/bookings" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Bookings fetched successfully\", \"data\": [{ \"id\": \"booking-uuid\", \"status\": \"REQUESTED\", \"service\": {}, \"payment\": null }] }" }]
+        },
+        {
+          "name": "Get booking details",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{baseUrl}}/api/bookings/{{bookingId}}" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Booking details fetched successfully\", \"data\": { \"id\": \"booking-uuid\", \"status\": \"ACCEPTED\", \"service\": {}, \"technicianProfile\": {}, \"customer\": {}, \"payment\": null, \"review\": null } }" }]
+        },
+        {
+          "name": "Create Stripe payment intent",
+          "event": [{ "listen": "test", "script": { "exec": ["const body = pm.response.json();", "if (body.success) { pm.collectionVariables.set('paymentId', body.data.paymentId); pm.collectionVariables.set('paymentIntentId', body.data.paymentIntentId); }"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"bookingId\": \"{{bookingId}}\" }" }, "url": "{{baseUrl}}/api/payments/create", "description": "Only works once the technician has accepted the booking. It creates a real Stripe test PaymentIntent." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Payment intent created successfully\", \"data\": { \"clientSecret\": \"pi_..._secret_...\", \"paymentIntentId\": \"pi_...\", \"paymentId\": \"payment-uuid\", \"amount\": 1300, \"currency\": \"usd\", \"bookingId\": \"booking-uuid\" } }" }]
+        },
+        {
+          "name": "Confirm completed Stripe payment",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"paymentIntentId\": \"{{paymentIntentId}}\" }" }, "url": "{{baseUrl}}/api/payments/confirm", "description": "Before calling this endpoint, confirm the intent through Stripe with a test payment method so its Stripe status is `succeeded`. This endpoint then marks both Payment and Booking as completed/PAID." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Payment confirmed successfully\", \"data\": { \"id\": \"payment-uuid\", \"bookingId\": \"booking-uuid\", \"transactionId\": \"pi_...\", \"amount\": 1300, \"provider\": \"STRIPE\", \"status\": \"COMPLETED\", \"paidAt\": \"2026-08-19T10:15:00.000Z\" } }" }]
+        },
+        {
+          "name": "Get payment history",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{baseUrl}}/api/payments" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Payment history fetched successfully\", \"data\": [{ \"id\": \"payment-uuid\", \"status\": \"COMPLETED\", \"booking\": { \"service\": {} } }] }" }]
+        },
+        {
+          "name": "Get payment details",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{baseUrl}}/api/payments/{{paymentId}}" },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Payment details fetched successfully\", \"data\": { \"id\": \"payment-uuid\", \"status\": \"COMPLETED\", \"booking\": { \"service\": {}, \"technicianProfile\": {} } } }" }]
+        },
+        {
+          "name": "Create review",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"bookingId\": \"{{bookingId}}\", \"rating\": 5, \"comment\": \"Arrived on time and fixed the leak properly.\" }" }, "url": "{{baseUrl}}/api/reviews", "description": "Only works after the technician changes a PAID booking from IN_PROGRESS to COMPLETED." },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "body": "{ \"success\": true, \"message\": \"Review submitted successfully\", \"data\": { \"id\": \"review-uuid\", \"bookingId\": \"booking-uuid\", \"customerId\": \"customer-user-uuid\", \"technicianProfileId\": \"technician-profile-uuid\", \"rating\": 5, \"comment\": \"Arrived on time and fixed the leak properly.\", \"createdAt\": \"2026-08-19T11:00:00.000Z\" } }" }]
+        },
+        {
+          "name": "Cancel booking",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{customerToken}}" }], "url": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel", "description": "Use on a separate booking only. Cancellation is allowed only while REQUESTED, ACCEPTED, or PAID." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Booking cancelled successfully\", \"data\": { \"id\": \"booking-uuid\", \"status\": \"CANCELLED\", \"service\": {}, \"technicianProfile\": {} } }" }]
+        }
+      ]
+    },
+    {
+      "name": "Stripe webhook (external only)",
+      "item": [
+        {
+          "name": "POST Stripe webhook",
+          "request": { "method": "POST", "header": [{ "key": "stripe-signature", "value": "{{stripeSignature}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"type\": \"payment_intent.succeeded\", \"data\": { \"object\": {} } }" }, "url": "{{baseUrl}}/api/payments/webhook", "description": "Do not send an invented signature from Postman: Stripe verifies the raw signed body. Forward test events using `stripe listen --forward-to localhost:5000/api/payments/webhook`; use the returned webhook signing secret as STRIPE_WEBHOOK_SECRET." },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"success\": true, \"message\": \"Webhook processed successfully\", \"data\": { \"received\": true } }" }]
+        }
+      ]
+    }
+  ]
+}

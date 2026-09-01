@@ -39,9 +39,9 @@ const moduleRoutes = [
     path: '/payments', 
     route: PaymentRoutes
   },
-  { path: '/reviews',
-    route: ReviewRoutes
-  },
+  // { path: '/reviews',
+  //   route: ReviewRoutes
+  // },
   { path: '/admin',
     route: AdminRoutes
   },

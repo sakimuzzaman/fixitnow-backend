@@ -18,4 +18,59 @@ const getAllBookings = catchAsync(async (req : any, res : any) => {
     sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Bookings fetched", data: result });
 });
 
-export const AdminController = { getAllUsers, updateUserStatus, getAllBookings };
+// added newly 
+const getAllCategories = catchAsync(async (req: any, res: any) => {
+  const result = await AdminService.getAllCategories();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Categories fetched successfully",
+    data: result,
+  });
+});
+
+const createCategory = catchAsync(async (req: any, res: any) => {
+  const result = await AdminService.createCategory(req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "Category created successfully",
+    data: result,
+  });
+});
+
+const updateCategory = catchAsync(async (req: any, res: any) => {
+  const result = await AdminService.updateCategory(
+    req.params.id,
+    req.body
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Category updated successfully",
+    data: result,
+  });
+});
+
+const deleteCategory = catchAsync(async (req: any, res: any) => {
+  await AdminService.deleteCategory(req.params.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Category deleted successfully",
+    data: null,
+  });
+});
+
+export const AdminController = {  getAllUsers, 
+                                  updateUserStatus, 
+                                  getAllBookings, 
+                                  getAllCategories, 
+                                  createCategory, 
+                                  updateCategory, 
+                                  deleteCategory 
+                                };
